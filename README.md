@@ -9,8 +9,8 @@ Wäldern, Dörfern und Burgen — und kannst Feuer speien.
 Repo klonen, lokalen Server starten und im Browser öffnen:
 
 ```bash
-git clone https://github.com/GitHubMagnus/fight-simulator.git
-cd fight-simulator
+git clone https://github.com/GitHubMagnus/DragonSimulator.git
+cd DragonSimulator
 node server.mjs
 # dann http://localhost:8000 öffnen
 ```
@@ -46,7 +46,7 @@ geladen — eine Internetverbindung ist nötig.
 Der Code ist in kleine ES-Module mit je einer Verantwortung aufgeteilt:
 
 ```
-fight-simulator/
+DragonSimulator/
 ├── index.html        # Seitengerüst, HUD, Menü- und Crash-Overlay
 ├── style.css         # Oberfläche (Mittelalter-Optik)
 ├── server.mjs        # kleiner lokaler Node-Server
