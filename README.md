@@ -6,15 +6,17 @@ Wäldern, Dörfern und Burgen — und kannst Feuer speien.
 
 ## Starten
 
-Lokalen Server starten und Link öffnen:
+Repo klonen, lokalen Server starten und im Browser öffnen:
 
-```powershell
-cd C:\Users\magnu\Desktop\claudecode\fight-simulator
+```bash
+git clone https://github.com/GitHubMagnus/fight-simulator.git
+cd fight-simulator
 node server.mjs
 # dann http://localhost:8000 öffnen
 ```
 
-(Three.js wird per CDN geladen — Internetverbindung nötig.)
+Voraussetzung: [Node.js](https://nodejs.org/) installiert. Three.js wird per CDN
+geladen — eine Internetverbindung ist nötig.
 
 ## Steuerung
 
