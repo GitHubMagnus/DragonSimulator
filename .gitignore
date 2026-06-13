@@ -1,0 +1,12 @@
+# Abhängigkeiten (falls später npm hinzukommt)
+node_modules/
+
+# Logs & Caches
+*.log
+.cache/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
