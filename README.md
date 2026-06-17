@@ -1,8 +1,10 @@
 # 🐉 Drachenflug — Mittelalter
 
-Ein Browser-Flugspiel mit [Three.js](https://threejs.org/). Du steuerst einen
-animierten Drachen durch ein endloses, mittelalterliches Königreich mit Gebirgen,
-Wäldern, Dörfern und Burgen — und kannst Feuer speien.
+Ein Browser-Flugspiel mit [Three.js](https://threejs.org/). Du wählst dein
+Fluggerät — **Drache 🐉**, **Flugzeug ✈️** oder **Ikarus 🪶** — und dessen Farbe,
+und fliegst dann durch ein endloses, mittelalterliches Königreich mit Gebirgen,
+Wäldern, Dörfern und Burgen. Drache und Flugzeug können Feuer/Beschuss nach vorn
+abgeben.
 
 ### ▶ [**Jetzt im Browser spielen**](https://githubmagnus.github.io/DragonSimulator/)
 
@@ -40,9 +42,11 @@ geladen — eine Internetverbindung ist nötig.
 | `A` / `D` | Drehen links / rechts (Yaw) |
 | `Q` / `E` | Rollen links / rechts |
 | `↑` / `↓` | Flügelschlag schneller / langsamer (Schub) |
-| `Leertaste` | Feuer speien 🔥 |
+| `Leertaste` | Feuer / Beschuss 🔥 (nur Drache & Flugzeug) |
 | `C` | Kamera (Verfolger / Cockpit) |
 | `R` | Neustart |
+
+Im Startmenü wählst du zuerst das **Fluggerät**, dann dessen **Farbe**.
 
 ## Welt & Details
 
@@ -51,7 +55,14 @@ geladen — eine Internetverbindung ist nötig.
 - **Burgen** mit Bergfried, vier Ecktürmen, Zinnen, Ringmauer, Tor und wehenden Fahnen.
 - **Endlose Welt**: Terrain, Bäume und Bauwerke ziehen mit dem Drachen mit
   (Bauwerke werden inkrementell, deterministisch pro Rasterzelle erzeugt).
-- **Drache** mit Flügelschlag, wedelndem Schwanz, Hörnern, glühenden Augen.
+- **Fluggeräte** (je ein detailreiches Modell aus Primitiven):
+  - **Drache** — Schuppenkörper, Rückenkamm, gehörnter Kopf mit Zähnen, glühende
+    Augen, gegliederte Flügel (Knochen + Fingerstreben + Membran), wedelnder
+    Schwanz, Flügelschlag abhängig vom Schub.
+  - **Flugzeug** — Propellerjäger mit drehendem Propeller, gläserner Kanzel,
+    Tragflächen mit V-Stellung, Leitwerk und Hoheitsabzeichen.
+  - **Ikarus** — fliegende Figur mit großen, mehrreihig gefiederten Schwingen auf
+    Wachs-/Armgerüst, Tunika und kräftigem Flügelschlag.
 - **Atmosphäre**: Gradient-Himmel, Sonnenscheibe, driftende Wolken, Dunst (Fog),
   Feuerbälle mit Lichtschein.
 
@@ -74,13 +85,17 @@ DragonSimulator/
     ├── structures.js # Burgen & Dörfer (Geometrie-Merging)
     ├── clouds.js     # driftende Wolken
     ├── water.js      # Wasserfläche
+    ├── flier.js      # gemeinsame Basisklasse aller Fluggeräte
+    ├── fliers.js     # Factory: erzeugt alle Fluggeräte nach id
     ├── dragon.js     # Drachen-Modell + Animation
-    ├── fire.js       # Feueratem
-    ├── flight.js     # Arcade-Flugphysik
+    ├── airplane.js   # Flugzeug-Modell + Propelleranimation
+    ├── icarus.js     # Ikarus-Modell + Federschwingen-Animation
+    ├── fire.js       # Feuer/Beschuss nach vorn
+    ├── flight.js     # Arcade-Flugphysik (fluggerät-unabhängig)
     ├── input.js      # Tastatursteuerung
     ├── cameraRig.js  # Kameraführung (Verfolger/Cockpit/Vorschau)
     ├── hud.js        # HUD-Anzeigen
-    └── menu.js       # Startmenü + Farbwahl
+    └── menu.js       # Startmenü: Fluggerät- und Farbwahl (zwei Schritte)
 ```
 
 **Architekturprinzipien:**
@@ -89,4 +104,7 @@ DragonSimulator/
 - Reine Funktionen (`noise.js`) sind von Zustand und Rendering getrennt.
 - Jedes Welt-/Entitäts-System ist eine Klasse mit klarer API
   (`update()`, `rebuild()`, `reset()` …) und kapselt seine Three.js-Objekte.
+- Alle Fluggeräte erben von `Flier` und teilen dieselbe Schnittstelle
+  (`position`, `quaternion`, `setColor()`, `update()`), sodass Flugphysik,
+  Kamera, Feuer und HUD unverändert mit jedem Modell funktionieren.
 - Alle Tuning-Werte liegen zentral in `config.js`.

@@ -7,8 +7,8 @@ import { heightAt } from "./noise.js";
 const FIRE_COOLDOWN = 0.06;
 
 export class FlightModel {
-  constructor(dragon) {
-    this._dragon = dragon;
+  constructor(flier) {
+    this._flier = flier;
     this.forward = new THREE.Vector3(0, 0, -1);
     this._q = new THREE.Quaternion();
     this._euler = new THREE.Euler();
@@ -17,9 +17,14 @@ export class FlightModel {
     this.reset();
   }
 
+  /** Aktives Fluggerät wechseln (Menü-Auswahl). */
+  setFlier(flier) {
+    this._flier = flier;
+  }
+
   reset() {
-    this._dragon.position.set(0, FLIGHT.SPAWN_ALT, 0);
-    this._dragon.quaternion.identity();
+    this._flier.position.set(0, FLIGHT.SPAWN_ALT, 0);
+    this._flier.quaternion.identity();
     this.throttle = FLIGHT.START_THROTTLE;
     this.speed = FLIGHT.MAX_SPEED * FLIGHT.START_THROTTLE;
     this.crashed = false;
@@ -29,7 +34,7 @@ export class FlightModel {
 
   update(dt, input, fire) {
     if (this.crashed) return;
-    const dragon = this._dragon;
+    const dragon = this._flier;
 
     // Schub
     if (input.isDown("ArrowUp")) this.throttle = Math.min(1, this.throttle + 0.5 * dt);
@@ -58,9 +63,9 @@ export class FlightModel {
     const lift = THREE.MathUtils.clamp(this.speed / (FLIGHT.MAX_SPEED * 0.55), 0, 1);
     dragon.position.y -= FLIGHT.GRAVITY * (1 - lift) * dt;
 
-    // Feueratem
+    // Feuer/Beschuss (nur wenn das Fluggerät es kann)
     this._fireTimer -= dt;
-    if (input.isDown("Space") && this._fireTimer <= 0) {
+    if (dragon.fireEnabled && input.isDown("Space") && this._fireTimer <= 0) {
       fire.shoot(dragon, this.forward, this.speed);
       this._fireTimer = FIRE_COOLDOWN;
     }

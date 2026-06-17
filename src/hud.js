@@ -6,8 +6,14 @@ export class Hud {
     this._speed = document.getElementById("speed");
     this._alt = document.getElementById("alt");
     this._thr = document.getElementById("thr");
+    this._thrLabel = document.getElementById("thrLabel");
     this._hdg = document.getElementById("hdg");
     this._crash = document.getElementById("crash");
+  }
+
+  /** Beschriftung der Schub-Anzeige je nach Fluggerät setzen. */
+  setThrottleLabel(text) {
+    if (this._thrLabel) this._thrLabel.textContent = text;
   }
 
   update(flight, dragon, forward) {

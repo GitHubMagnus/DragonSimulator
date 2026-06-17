@@ -5,8 +5,9 @@ node_modules/
 *.log
 .cache/
 
-# Editor / OS
+# Editor / OS / Tooling
 .vscode/
 .idea/
+.claude/
 .DS_Store
 Thumbs.db

@@ -10,7 +10,7 @@
   <div id="hud">
     <div class="readout"><span class="label">TEMPO</span><span id="speed">0</span><span class="unit">km/h</span></div>
     <div class="readout"><span class="label">HÖHE</span><span id="alt">0</span><span class="unit">m</span></div>
-    <div class="readout"><span class="label">SCHLAG</span><span id="thr">0</span><span class="unit">%</span></div>
+    <div class="readout"><span class="label" id="thrLabel">SCHLAG</span><span id="thr">0</span><span class="unit">%</span></div>
     <div class="readout"><span class="label">KURS</span><span id="hdg">N</span><span class="unit">&nbsp;</span></div>
   </div>
 
@@ -18,10 +18,25 @@
     <div class="panel">
       <h1>🐉 Drachenflug</h1>
       <p class="sub">Königreich der Lüfte</p>
-      <p class="lbl">Wähle deinen Drachen</p>
-      <div id="colors"></div>
-      <button id="startBtn">Flug beginnen ▸</button>
-      <p class="hint"><b>W/S</b> neigen · <b>A/D</b> drehen · <b>Q/E</b> rollen · <b>↑/↓</b> Schub · <b>Leertaste</b> Feuer 🔥</p>
+
+      <!-- Schritt 1: Fluggerät -->
+      <div id="step-flier" class="step">
+        <p class="lbl">Wähle dein Fluggerät</p>
+        <div id="fliers"></div>
+        <button id="toColorBtn">Weiter ▸</button>
+      </div>
+
+      <!-- Schritt 2: Farbe -->
+      <div id="step-color" class="step hidden">
+        <p class="lbl">Wähle die Farbe</p>
+        <div id="colors"></div>
+        <div class="actions">
+          <button id="backBtn" class="ghost">◂ Zurück</button>
+          <button id="startBtn">Flug beginnen ▸</button>
+        </div>
+      </div>
+
+      <p class="hint"><b>W/S</b> neigen · <b>A/D</b> drehen · <b>Q/E</b> rollen · <b>↑/↓</b> Schub<span id="fireHint"> · <b>Leertaste</b> Feuer 🔥</span></p>
     </div>
   </div>
 

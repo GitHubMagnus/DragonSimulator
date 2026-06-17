@@ -2,14 +2,14 @@
 // Animationsschleife an. Spiel-Logik liegt in den jeweiligen Modulen.
 import * as THREE from "three";
 
-import { RECENTER_DIST, STEP, DRAGON_PALETTE } from "./config.js";
+import { RECENTER_DIST, STEP, FLIERS } from "./config.js";
 import { scene, camera, renderer, updateSky } from "./scene.js";
 import { Terrain } from "./terrain.js";
 import { Trees } from "./trees.js";
 import { Structures } from "./structures.js";
 import { Clouds } from "./clouds.js";
 import { Water } from "./water.js";
-import { Dragon } from "./dragon.js";
+import { createFliers } from "./fliers.js";
 import { FireBreath } from "./fire.js";
 import { FlightModel } from "./flight.js";
 import { Input } from "./input.js";
@@ -23,12 +23,18 @@ const trees = new Trees(scene);
 const structures = new Structures(scene);
 const clouds = new Clouds(scene);
 const water = new Water(scene);
-const dragon = new Dragon(scene);
+const fliers = createFliers(scene); // { dragon, airplane, icarus }
 const fire = new FireBreath(scene);
-const flight = new FlightModel(dragon);
 const input = new Input();
 const rig = new CameraRig(camera);
 const hud = new Hud();
+
+// Nur das aktive Fluggerät ist sichtbar; das Menü wechselt es.
+let active = fliers.dragon;
+for (const id in fliers) fliers[id].group.visible = false;
+active.group.visible = true;
+
+const flight = new FlightModel(active);
 
 // ---- Zustand ----
 const center = { x: 0, z: 0 }; // Weltmittelpunkt, dem die Welt folgt
@@ -52,10 +58,10 @@ function resetFlight() {
   hud.hideCrash();
 }
 
-/** Welt nachziehen, wenn der Drache zu weit vom Mittelpunkt entfernt ist. */
+/** Welt nachziehen, wenn das Fluggerät zu weit vom Mittelpunkt entfernt ist. */
 function recenterIfNeeded() {
-  const dx = dragon.position.x - center.x;
-  const dz = dragon.position.z - center.z;
+  const dx = active.position.x - center.x;
+  const dz = active.position.z - center.z;
   if (Math.abs(dx) > RECENTER_DIST || Math.abs(dz) > RECENTER_DIST) {
     center.x += Math.round(dx / STEP) * STEP;
     center.z += Math.round(dz / STEP) * STEP;
@@ -63,14 +69,31 @@ function recenterIfNeeded() {
   }
 }
 
+/** Im Menü gewähltes Fluggerät aktiv schalten (ohne Kamerasprung). */
+function selectFlier(id) {
+  active.group.visible = false;
+  const next = fliers[id];
+  next.position.copy(active.position);
+  next.quaternion.copy(active.quaternion);
+  active = next;
+  active.group.visible = true;
+  flight.setFlier(active);
+  hud.setThrottleLabel(id === "airplane" ? "SCHUB" : "SCHLAG");
+}
+
 // ---- Verdrahtung ----
 flight.onCrash = () => hud.showCrash();
 input.onPress("KeyR", resetFlight);
 input.onPress("KeyC", () => rig.toggle());
 
-new StartMenu(DRAGON_PALETTE, dragon, () => {
-  resetFlight();
-  started = true;
+new StartMenu({
+  fliers: FLIERS,
+  onFlier: (id) => selectFlier(id),
+  onColor: (hex) => active.setColor(hex),
+  onStart: () => {
+    resetFlight();
+    started = true;
+  },
 });
 
 // ---- Animationsschleife ----
@@ -81,16 +104,16 @@ function animate() {
   time += dt;
 
   if (started) flight.update(dt, input, fire);
-  dragon.update(time, flight.throttle);
-  fire.update(dt, dragon);
+  active.update(time, flight.throttle);
+  fire.update(dt, active);
 
   if (started) recenterIfNeeded();
 
-  water.update(dragon.position.x, dragon.position.z);
+  water.update(active.position.x, active.position.z);
   updateSky();
-  clouds.update(dt, dragon.position.x, dragon.position.z);
-  rig.update(dt, dragon, flight.forward, started, time);
-  if (started) hud.update(flight, dragon, flight.forward);
+  clouds.update(dt, active.position.x, active.position.z);
+  rig.update(dt, active, flight.forward, started, time);
+  if (started) hud.update(flight, active, flight.forward);
 
   renderer.render(scene, camera);
 }

@@ -1,8 +1,9 @@
-// Feueratem des Drachen: einzelne Feuerbälle, die wachsen, ausglühen und
-// verlöschen, plus ein gemeinsamer Lichtschein.
+// Feuer/Beschuss nach vorn: einzelne Feuerbälle, die wachsen, ausglühen und
+// verlöschen, plus ein gemeinsamer Lichtschein. Die Mündung kommt vom jeweiligen
+// Fluggerät (flier.fireMuzzle), damit Drache und Flugzeug aus dem richtigen
+// Punkt feuern.
 import * as THREE from "three";
 
-const MUZZLE = new THREE.Vector3(0, 7, -26); // Mündung relativ zum Drachen
 const LIFETIME = 1.1;
 
 export class FireBreath {
@@ -11,26 +12,27 @@ export class FireBreath {
     this._balls = [];
     this._geo = new THREE.SphereGeometry(2.4, 10, 8);
     this._light = new THREE.PointLight(0xff7b1a, 0, 260);
+    this._muzzle = new THREE.Vector3();
     scene.add(this._light);
   }
 
-  /** Einen Feuerball aus dem Maul des Drachen abschießen. */
-  shoot(dragon, forward, speed) {
+  /** Einen Feuerball aus der Mündung des Fluggeräts abschießen. */
+  shoot(flier, forward, speed) {
     const mesh = new THREE.Mesh(
       this._geo,
       new THREE.MeshBasicMaterial({ color: 0xffcc33, transparent: true, fog: false })
     );
-    mesh.position.copy(MUZZLE).applyQuaternion(dragon.quaternion).add(dragon.position);
+    mesh.position.copy(flier.fireMuzzle).applyQuaternion(flier.quaternion).add(flier.position);
 
     const spread = new THREE.Vector3((Math.random() - 0.5) * 0.05, (Math.random() - 0.5) * 0.05, 0)
-      .applyQuaternion(dragon.quaternion);
+      .applyQuaternion(flier.quaternion);
     const vel = forward.clone().add(spread).normalize().multiplyScalar(speed + 320);
 
     this._scene.add(mesh);
     this._balls.push({ mesh, vel, life: LIFETIME });
   }
 
-  update(dt, dragon) {
+  update(dt, flier) {
     let glowing = false;
     for (let i = this._balls.length - 1; i >= 0; i--) {
       const b = this._balls[i];
@@ -53,7 +55,7 @@ export class FireBreath {
 
     if (glowing) {
       this._light.intensity = 3.5;
-      this._light.position.copy(MUZZLE).applyQuaternion(dragon.quaternion).add(dragon.position);
+      this._light.position.copy(flier.fireMuzzle).applyQuaternion(flier.quaternion).add(flier.position);
     } else {
       this._light.intensity *= 0.85;
     }
