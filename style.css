@@ -158,7 +158,7 @@ canvas { display: block; }
 .step.hidden { display: none; }
 .actions { display: flex; gap: 12px; justify-content: center; align-items: center; }
 
-#startBtn, #toColorBtn {
+#startBtn, #toColorBtn, #respawnBtn {
   font-family: inherit;
   font-size: 19px;
   font-weight: 700;
@@ -171,8 +171,8 @@ canvas { display: block; }
   letter-spacing: 0.5px;
   transition: transform 0.12s ease, filter 0.12s ease;
 }
-#startBtn:hover, #toColorBtn:hover { transform: translateY(-2px); filter: brightness(1.08); }
-#startBtn:active, #toColorBtn:active { transform: translateY(0); }
+#startBtn:hover, #toColorBtn:hover, #respawnBtn:hover { transform: translateY(-2px); filter: brightness(1.08); }
+#startBtn:active, #toColorBtn:active, #respawnBtn:active { transform: translateY(0); }
 
 button.ghost {
   font-family: inherit;
@@ -202,8 +202,10 @@ button.ghost:hover { background: rgba(212, 175, 110, 0.15); color: #ffd27a; }
   color: #fff;
   text-align: center;
   user-select: none;
+  z-index: 20;
 }
 #crash.show { display: flex; }
 #crash h2 { font-size: 56px; margin-bottom: 12px; }
 #crash p { font-size: 20px; }
 #crash b { color: #ffd27a; }
+#crash .actions { margin-top: 26px; }

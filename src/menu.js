@@ -92,4 +92,10 @@ export class StartMenu {
     this._stepColor.classList.add("hidden");
     this._stepFlier.classList.remove("hidden");
   }
+
+  /** Menü wieder einblenden (z. B. nach einem Crash), zurück auf Schritt 1. */
+  open() {
+    this._goToFlier();
+    this._menu.classList.remove("hidden");
+  }
 }

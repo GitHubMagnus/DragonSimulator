@@ -3,14 +3,16 @@
 import * as THREE from "three";
 
 import { RECENTER_DIST, STEP, FLIERS } from "./config.js";
-import { scene, camera, renderer, updateSky } from "./scene.js";
+import { scene, camera, renderer, updateSky, postFx } from "./scene.js";
 import { Terrain } from "./terrain.js";
 import { Trees } from "./trees.js";
 import { Structures } from "./structures.js";
 import { Clouds } from "./clouds.js";
+import { Birds } from "./birds.js";
 import { Water } from "./water.js";
 import { createFliers } from "./fliers.js";
 import { FireBreath } from "./fire.js";
+import { Bullets } from "./bullets.js";
 import { FlightModel } from "./flight.js";
 import { Input } from "./input.js";
 import { CameraRig } from "./cameraRig.js";
@@ -22,9 +24,11 @@ const terrain = new Terrain(scene);
 const trees = new Trees(scene);
 const structures = new Structures(scene);
 const clouds = new Clouds(scene);
+const birds = new Birds(scene);
 const water = new Water(scene);
 const fliers = createFliers(scene); // { dragon, airplane, icarus }
 const fire = new FireBreath(scene);
+const bullets = new Bullets(scene);
 const input = new Input();
 const rig = new CameraRig(camera);
 const hud = new Hud();
@@ -55,6 +59,7 @@ function resetFlight() {
   structures.clear();
   rebuildWorld();
   fire.reset();
+  bullets.reset();
   hud.hideCrash();
 }
 
@@ -86,7 +91,7 @@ flight.onCrash = () => hud.showCrash();
 input.onPress("KeyR", resetFlight);
 input.onPress("KeyC", () => rig.toggle());
 
-new StartMenu({
+const menu = new StartMenu({
   fliers: FLIERS,
   onFlier: (id) => selectFlier(id),
   onColor: (hex) => active.setColor(hex),
@@ -96,6 +101,16 @@ new StartMenu({
   },
 });
 
+/** Nach einem Crash zurück zur Fluggerät-Auswahl. */
+function returnToMenu() {
+  resetFlight();
+  started = false;
+  menu.open();
+}
+
+document.getElementById("respawnBtn").addEventListener("click", resetFlight);
+document.getElementById("menuBtn").addEventListener("click", returnToMenu);
+
 // ---- Animationsschleife ----
 const timer = new THREE.Timer();
 function animate() {
@@ -103,19 +118,22 @@ function animate() {
   const dt = Math.min(timer.getDelta(), 0.05);
   time += dt;
 
-  if (started) flight.update(dt, input, fire);
+  if (started) flight.update(dt, input);
   active.update(time, flight.throttle);
-  fire.update(dt, active);
+  const firing = started && flight.firing;
+  fire.update(dt, active, flight.forward, firing && active.fireMode === "flame", flight.speed);
+  bullets.update(dt, active, flight.forward, firing && active.fireMode === "shots", flight.speed);
 
   if (started) recenterIfNeeded();
 
   water.update(active.position.x, active.position.z);
   updateSky();
   clouds.update(dt, active.position.x, active.position.z);
+  birds.update(dt, time, active.position.x, active.position.z);
   rig.update(dt, active, flight.forward, started, time);
   if (started) hud.update(flight, active, flight.forward);
 
-  renderer.render(scene, camera);
+  postFx.render();
 }
 
 resetFlight();
