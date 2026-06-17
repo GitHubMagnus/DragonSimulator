@@ -1,8 +1,13 @@
-// Wolkenschicht, die dem Spieler folgt und langsam driftet.
+// Wolkenschicht in Weltkoordinaten: jede Wolke hat eine feste Weltposition und
+// driftet nur langsam selbst. Fliegt der Spieler, zieht er an den Wolken vorbei.
+// Weit entfernte Wolken werden (unsichtbar hinter dem Dunst) um den Spieler
+// herum „umgeschlagen", damit der Himmel immer bevölkert bleibt.
 import * as THREE from "three";
 
-const CLOUD_COUNT = 14;
-const SPAN = 6000; // Wickelbereich der Drift
+const CLOUD_COUNT = 26;
+const SPAN = 9000;       // Umschlagbereich um den Spieler
+const HALF = SPAN / 2;
+const mod = (a, n) => ((a % n) + n) % n;
 
 export class Clouds {
   constructor(scene) {
@@ -25,10 +30,11 @@ export class Clouds {
         c.add(m);
       }
       c.userData = {
-        ox: (Math.random() - 0.5) * 5000,
-        oz: (Math.random() - 0.5) * 5000,
+        wx: Math.random() * SPAN,
+        wz: Math.random() * SPAN,
         y: 650 + Math.random() * 700,
-        drift: 6 + Math.random() * 10,
+        driftX: (Math.random() - 0.5) * 9,
+        driftZ: (Math.random() - 0.5) * 7,
       };
       this._clouds.push(c);
       this.root.add(c);
@@ -36,11 +42,13 @@ export class Clouds {
   }
 
   update(dt, playerX, playerZ) {
-    this.root.position.set(playerX, 0, playerZ);
     for (const c of this._clouds) {
-      c.userData.ox += c.userData.drift * dt;
-      const lx = ((c.userData.ox + SPAN / 2) % SPAN) - SPAN / 2;
-      c.position.set(lx, c.userData.y, c.userData.oz);
+      const u = c.userData;
+      u.wx += u.driftX * dt;
+      u.wz += u.driftZ * dt;
+      const x = playerX + mod(u.wx - playerX + HALF, SPAN) - HALF;
+      const z = playerZ + mod(u.wz - playerZ + HALF, SPAN) - HALF;
+      c.position.set(x, u.y, z);
     }
   }
 }

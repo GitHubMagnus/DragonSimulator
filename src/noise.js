@@ -51,6 +51,16 @@ function ridged(x, z, octaves, freq) {
   return sum / norm;
 }
 
+// ---- Biom-Felder (sehr niederfrequent → große Regionen) ----
+/** „Temperatur" 0..1: arid → gemäßigt → kalt. Steuert Boden- & Baumfarben. */
+export function climateAt(x, z) {
+  return valueNoise(x * 0.00032 + 300, z * 0.00032 - 120);
+}
+/** „Feuchte" 0..1: trocken → üppig. Mischt Herbst-/Laubtöne und Walddichte. */
+export function moistureAt(x, z) {
+  return valueNoise(x * 0.00045 - 80, z * 0.00045 + 260);
+}
+
 /**
  * Geländehöhe an Weltposition (x, z).
  * Kombiniert sanftes Grundland mit Gebirgen, die nur in maskierten Regionen aufragen.
