@@ -4,7 +4,17 @@ Ein Browser-Flugspiel mit [Three.js](https://threejs.org/). Du steuerst einen
 animierten Drachen durch ein endloses, mittelalterliches Königreich mit Gebirgen,
 Wäldern, Dörfern und Burgen — und kannst Feuer speien.
 
+### ▶ [**Jetzt im Browser spielen**](https://githubmagnus.github.io/DragonSimulator/)
+
+Kein Download, keine Installation — einfach den Link öffnen.
+
 ## Starten
+
+### Online (empfohlen)
+
+Direkt im Browser spielen: <https://githubmagnus.github.io/DragonSimulator/>
+
+### Lokal
 
 Repo klonen, lokalen Server starten und im Browser öffnen:
 
@@ -17,6 +27,10 @@ node server.mjs
 
 Voraussetzung: [Node.js](https://nodejs.org/) installiert. Three.js wird per CDN
 geladen — eine Internetverbindung ist nötig.
+
+> Ein lokaler Server ist nötig, weil Browser ES-Modul-`import`s über das
+> `file://`-Protokoll blockieren. Die Online-Version (GitHub Pages) liefert die
+> Dateien per HTTPS aus und braucht daher keinen lokalen Server.
 
 ## Steuerung
 
