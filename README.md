@@ -27,8 +27,10 @@ node server.mjs
 # dann http://localhost:8000 öffnen
 ```
 
-Voraussetzung: [Node.js](https://nodejs.org/) installiert. Three.js wird per CDN
-geladen — eine Internetverbindung ist nötig.
+Voraussetzung: [Node.js](https://nodejs.org/) installiert. Three.js (r0.183, der
+**WebGPU**-Build) wird per CDN geladen — eine Internetverbindung ist nötig. Das
+Rendering läuft über den `WebGPURenderer`; Browser ohne WebGPU (z. B. ältere
+Safari/Firefox) fallen automatisch auf **WebGL2** zurück.
 
 > Ein lokaler Server ist nötig, weil Browser ES-Modul-`import`s über das
 > `file://`-Protokoll blockieren. Die Online-Version (GitHub Pages) liefert die

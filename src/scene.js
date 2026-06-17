@@ -1,12 +1,17 @@
-// Grafik-Grundgerüst: Renderer, Szene, Kamera, Beleuchtung und Himmel.
+// Grafik-Grundgerüst: Renderer (WebGPU mit WebGL2-Fallback), Szene, Kamera,
+// Beleuchtung und Himmel.
 import * as THREE from "three";
+import { positionLocal, color, mix, select, max } from "three/tsl";
 
 export const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0xcdd8e6, 0.00021);
 
 export const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 1, 16000);
 
-export const renderer = new THREE.WebGLRenderer({ antialias: true });
+// WebGPURenderer fällt automatisch auf WebGL2 zurück, wenn der Browser kein
+// WebGPU kann. Vor dem ersten Rendern muss renderer.init() awaited werden
+// (siehe main.js).
+export const renderer = new THREE.WebGPURenderer({ antialias: true });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -19,33 +24,20 @@ scene.add(sun);
 scene.add(new THREE.HemisphereLight(0xbcd6ff, 0x55702f, 0.85));
 scene.add(new THREE.AmbientLight(0xffffff, 0.18));
 
-// ---- Himmel: Gradient-Kuppel ----
-const sky = new THREE.Mesh(
-  new THREE.SphereGeometry(12000, 32, 16),
-  new THREE.ShaderMaterial({
-    side: THREE.BackSide, depthWrite: false, fog: false,
-    uniforms: {
-      top: { value: new THREE.Color(0x2f6fb5) },
-      horizon: { value: new THREE.Color(0xcdd8e6) },
-      bottom: { value: new THREE.Color(0xa9b59a) },
-    },
-    vertexShader: /* glsl */ `
-      varying vec3 vDir;
-      void main() {
-        vDir = normalize(position);
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }`,
-    fragmentShader: /* glsl */ `
-      varying vec3 vDir;
-      uniform vec3 top; uniform vec3 horizon; uniform vec3 bottom;
-      void main() {
-        float y = vDir.y;
-        vec3 c = (y > 0.0) ? mix(horizon, top, pow(y, 0.5))
-                           : mix(horizon, bottom, pow(-y, 0.7));
-        gl_FragColor = vec4(c, 1.0);
-      }`,
-  })
-);
+// ---- Himmel: Gradient-Kuppel (TSL-Node-Material) ----
+// Farbverlauf nach Blickrichtung: oben → Horizont → unten.
+const skyMat = new THREE.MeshBasicNodeMaterial({ side: THREE.BackSide, depthWrite: false, fog: false });
+{
+  const dir = positionLocal.normalize();
+  const y = dir.y;
+  const top = color(0x2f6fb5);
+  const horizon = color(0xcdd8e6);
+  const bottom = color(0xa9b59a);
+  const above = mix(horizon, top, max(y, 0).pow(0.5));
+  const below = mix(horizon, bottom, max(y.negate(), 0).pow(0.7));
+  skyMat.colorNode = select(y.greaterThan(0), above, below);
+}
+const sky = new THREE.Mesh(new THREE.SphereGeometry(12000, 32, 16), skyMat);
 sky.frustumCulled = false;
 scene.add(sky);
 

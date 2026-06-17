@@ -97,10 +97,10 @@ new StartMenu({
 });
 
 // ---- Animationsschleife ----
-const clock = new THREE.Clock();
+const timer = new THREE.Timer();
 function animate() {
-  requestAnimationFrame(animate);
-  const dt = Math.min(clock.getDelta(), 0.05);
+  timer.update();
+  const dt = Math.min(timer.getDelta(), 0.05);
   time += dt;
 
   if (started) flight.update(dt, input, fire);
@@ -119,4 +119,6 @@ function animate() {
 }
 
 resetFlight();
-animate();
+// WebGPU asynchron initialisieren, dann die vom Renderer getriebene Schleife starten.
+await renderer.init();
+renderer.setAnimationLoop(animate);
