@@ -10,6 +10,7 @@ export class Airplane extends Flier {
     super();
 
     this.fireEnabled = true;
+    this.fireMode = "shots";
     this.fireMuzzle.set(0, 0, -30); // vor dem Spinner (Bordwaffen)
 
     this._bodyMat = new THREE.MeshStandardMaterial({ color: 0x3d6b3a, flatShading: true, roughness: 0.55, metalness: 0.1 });

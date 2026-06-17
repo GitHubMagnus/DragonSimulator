@@ -4,15 +4,13 @@ import * as THREE from "three";
 import { FLIGHT } from "./config.js";
 import { heightAt } from "./noise.js";
 
-const FIRE_COOLDOWN = 0.06;
-
 export class FlightModel {
   constructor(flier) {
     this._flier = flier;
     this.forward = new THREE.Vector3(0, 0, -1);
     this._q = new THREE.Quaternion();
     this._euler = new THREE.Euler();
-    this._fireTimer = 0;
+    this.firing = false; // ob gerade gefeuert wird (vom Feuer-System gelesen)
     this.onCrash = null;
     this.reset();
   }
@@ -28,12 +26,12 @@ export class FlightModel {
     this.throttle = FLIGHT.START_THROTTLE;
     this.speed = FLIGHT.MAX_SPEED * FLIGHT.START_THROTTLE;
     this.crashed = false;
-    this._fireTimer = 0;
+    this.firing = false;
     this.forward.set(0, 0, -1);
   }
 
-  update(dt, input, fire) {
-    if (this.crashed) return;
+  update(dt, input) {
+    if (this.crashed) { this.firing = false; return; }
     const dragon = this._flier;
 
     // Schub
@@ -63,12 +61,9 @@ export class FlightModel {
     const lift = THREE.MathUtils.clamp(this.speed / (FLIGHT.MAX_SPEED * 0.55), 0, 1);
     dragon.position.y -= FLIGHT.GRAVITY * (1 - lift) * dt;
 
-    // Feuer/Beschuss (nur wenn das Fluggerät es kann)
-    this._fireTimer -= dt;
-    if (dragon.fireEnabled && input.isDown("Space") && this._fireTimer <= 0) {
-      fire.shoot(dragon, this.forward, this.speed);
-      this._fireTimer = FIRE_COOLDOWN;
-    }
+    // Feuer/Beschuss (nur wenn das Fluggerät es kann) — das Partikelsystem
+    // liest dieses Flag und emittiert an der Mündung.
+    this.firing = dragon.fireEnabled && input.isDown("Space");
 
     // Bodenkollision
     const ground = heightAt(dragon.position.x, dragon.position.z);

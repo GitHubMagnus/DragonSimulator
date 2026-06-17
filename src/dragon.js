@@ -10,6 +10,7 @@ export class Dragon extends Flier {
     super();
 
     this.fireEnabled = true;
+    this.fireMode = "flame";
     this.fireMuzzle.set(0, 7, -26);
 
     // Materialien (von setColor() eingefärbt)
