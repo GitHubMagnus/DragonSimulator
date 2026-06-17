@@ -8,7 +8,10 @@ export const WATER_LEVEL = 0;
 export const RECENTER_DIST = WORLD * 0.2;   // ab dieser Distanz zieht die Welt nach
 
 // ---- Bäume (instanziert, deterministisch pro Rasterzelle) ----
-export const TREE_CELL = 150;
+// Kleinere Zelle = dichterer Wald. TREE_COUNT ist die Obergrenze je
+// Instanz-Mesh (max. ein Baum pro Zelle); gezeichnet werden nur die
+// tatsächlich gefüllten via InstancedMesh.count.
+export const TREE_CELL = 55;
 export const TREE_SPAN = Math.round(WORLD / TREE_CELL);
 export const TREE_COUNT = TREE_SPAN * TREE_SPAN;
 

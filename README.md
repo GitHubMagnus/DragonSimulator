@@ -52,7 +52,10 @@ Im Startmenü wählst du zuerst das **Fluggerät**, dann dessen **Farbe**.
 
 ## Welt & Details
 
-- **Gebirge** durch Ridged-Noise mit Bergmaske — Schneegipfel, Felsen, Wälder, Täler.
+- **Gebirge** durch Ridged-Noise mit Bergmaske — Schneegipfel, Felsen, Täler.
+- **Dichte Mischwälder**: zehntausende instanzierte Nadel- und Laubbäume, in
+  natürlichen Clustern (Wald-Dichtefeld) mit Lichtungen; das Laub schwingt per
+  TSL-Vertex-Wind. Bäume meiden Wasser und Gipfel.
 - **Dörfer** aus Fachwerkhäusern mit Dächern, Türen und Schornsteinen.
 - **Burgen** mit Bergfried, vier Ecktürmen, Zinnen, Ringmauer, Tor und wehenden Fahnen.
 - **Endlose Welt**: Terrain, Bäume und Bauwerke ziehen mit dem Drachen mit
@@ -83,7 +86,7 @@ DragonSimulator/
     ├── noise.js      # prozedurales Höhenrauschen (heightAt)
     ├── scene.js      # Renderer, Szene, Kamera, Licht, Himmel
     ├── terrain.js    # endloses Low-Poly-Terrain
-    ├── trees.js      # instanzierte Tannenwälder
+    ├── trees.js      # dichte Mischwälder (instanziert) + TSL-Windschwung
     ├── structures.js # Burgen & Dörfer (Geometrie-Merging)
     ├── clouds.js     # driftende Wolken
     ├── water.js      # Wasserfläche
