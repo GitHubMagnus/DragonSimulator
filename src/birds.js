@@ -3,6 +3,7 @@
 // vorbei. Weit entfernte Schwärme werden um den Spieler herum „umgeschlagen",
 // damit immer Vögel am Himmel sind. Die Flügel schlagen (CPU-Animation).
 import * as THREE from "three";
+import { PORT } from "./world.js";
 
 const FLOCKS = 9;
 const PER_FLOCK = 9;
@@ -75,6 +76,53 @@ export class Birds {
         u.wl.rotation.z = -fl;
         u.wr.rotation.z = fl;
       }
+    }
+  }
+}
+
+/** Möwen: kreisen dauerhaft über dem Fischerdorf und dem Pier. */
+export class Gulls {
+  constructor(scene) {
+    this.root = new THREE.Group();
+    scene.add(this.root);
+    const mat = new THREE.MeshStandardMaterial({ color: 0xe8ecef, roughness: 0.85 });
+    const wingGeo = new THREE.BoxGeometry(7, 0.3, 2.2);
+    const bodyGeo = new THREE.BoxGeometry(1.2, 0.9, 3.6);
+
+    this._gulls = [];
+    for (let i = 0; i < 7; i++) {
+      const b = new THREE.Group();
+      const wl = new THREE.Group();
+      const wr = new THREE.Group();
+      const ml = new THREE.Mesh(wingGeo, mat); ml.position.x = -3.5; wl.add(ml);
+      const mr = new THREE.Mesh(wingGeo, mat); mr.position.x = 3.5; wr.add(mr);
+      b.add(wl, wr, new THREE.Mesh(bodyGeo, mat));
+      b.userData = {
+        wl, wr,
+        r: 55 + Math.random() * 110,
+        h: 28 + Math.random() * 45,
+        spd: (0.25 + Math.random() * 0.2) * (i % 2 ? 1 : -1),
+        phase: Math.random() * 6.28,
+        flap: 6 + Math.random() * 4,
+      };
+      this.root.add(b);
+      this._gulls.push(b);
+    }
+  }
+
+  update(dt, t) {
+    for (const g of this._gulls) {
+      const u = g.userData;
+      const a = t * u.spd + u.phase;
+      g.position.set(
+        PORT.x + Math.cos(a) * u.r,
+        PORT.groundH + u.h + Math.sin(t * 0.9 + u.phase) * 4,
+        PORT.z + 140 + Math.sin(a) * u.r
+      );
+      g.rotation.y = -a - (u.spd > 0 ? Math.PI / 2 : -Math.PI / 2);
+      const fl = Math.sin(t * u.flap + u.phase) * 0.45;
+      u.wl.rotation.z = -fl;
+      u.wr.rotation.z = fl;
     }
   }
 }

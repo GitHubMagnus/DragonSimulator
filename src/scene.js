@@ -1,11 +1,17 @@
 // Grafik-Grundgerüst: Renderer (WebGPU mit WebGL2-Fallback), Szene, Kamera,
-// Beleuchtung und Himmel.
+// Beleuchtung (mit Echtzeit-Schatten), physikalisch inspirierter Himmel und
+// HDR-Post-Processing (ACES-Tonemapping + Bloom).
 import * as THREE from "three";
-import { positionLocal, color, mix, select, max, uniform, pass } from "three/tsl";
+import {
+  positionLocal, color, mix, select, uniform, pass, float, smoothstep, hash, step,
+} from "three/tsl";
 import { bloom } from "three/addons/tsl/display/BloomNode.js";
 
 export const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0xcdd8e6, 0.00021);
+const FOG_DAY = new THREE.Color(0xc6d3e2);
+const FOG_NIGHT = new THREE.Color(0x0b101c);
+const FOG_BASE_DENSITY = 0.00021;
+scene.fog = new THREE.FogExp2(0xc6d3e2, FOG_BASE_DENSITY);
 
 export const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 1, 16000);
 
@@ -16,46 +22,95 @@ export const renderer = new THREE.WebGPURenderer({ antialias: true });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+// Filmisches Tonemapping: HDR-Licht (Sonne, Feuer, Tracer) rollt weich ab,
+// statt hart zu clippen — deutlich realistischere Lichtstimmung.
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
-// ---- Beleuchtung: warme Mittagssonne + Himmelslicht ----
-const sun = new THREE.DirectionalLight(0xfff0d0, 1.7);
-sun.position.set(-0.5, 1.0, 0.35).multiplyScalar(2000);
-scene.add(sun);
-scene.add(new THREE.HemisphereLight(0xbcd6ff, 0x55702f, 0.85));
-scene.add(new THREE.AmbientLight(0xffffff, 0.18));
+// ---- Beleuchtung: Sonne wandert im Tag-Nacht-Zyklus ----
+// SUN_DIR wird pro Frame mutiert; alle Shader referenzieren denselben Vektor
+// über uniform(SUN_DIR). uNight (0 Tag … 1 Nacht) steuert Fensterlichter,
+// Fackeln usw. in anderen Modulen.
+export const SUN_DIR = new THREE.Vector3(-0.5, 1.0, 0.35).normalize();
+export const uNight = uniform(0);
+const uSunElev = uniform(1);
+const DAY_LEN = 480; // Sekunden pro voller Tag
 
-// ---- Himmel: Gradient-Kuppel mit atmosphärischem Sonnenschein (TSL) ----
-// Farbverlauf nach Blickrichtung (oben → Horizont → unten) plus ein heller
-// Halo um die Sonnenrichtung; das Bloom (Post-FX) lässt den Kern aufstrahlen.
-const SUN_DIR = new THREE.Vector3(-0.5, 1.0, 0.35).normalize();
+const sun = new THREE.DirectionalLight(0xffeed2, 3.0);
+sun.position.copy(SUN_DIR).multiplyScalar(3000);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -700;
+sun.shadow.camera.right = 700;
+sun.shadow.camera.top = 700;
+sun.shadow.camera.bottom = -700;
+sun.shadow.camera.near = 1;
+sun.shadow.camera.far = 7000;
+sun.shadow.bias = -0.0002;
+sun.shadow.normalBias = 2.5;
+scene.add(sun);
+scene.add(sun.target);
+
+const hemi = new THREE.HemisphereLight(0xbcd6ff, 0x55702f, 0.7);
+scene.add(hemi);
+const ambient = new THREE.AmbientLight(0xffffff, 0.12);
+scene.add(ambient);
+
+// ---- Himmel: atmosphärische Kuppel (TSL) ----
+// Rayleigh-artiger Verlauf (Zenit-Blau → heller Horizontdunst), warmes
+// Vorwärts-Streulicht um die tiefstehende Sonne, Mie-Halo und eine
+// HDR-Sonnenscheibe (>1), die das Bloom zum Aufstrahlen bringt.
 const skyMat = new THREE.MeshBasicNodeMaterial({ side: THREE.BackSide, depthWrite: false, fog: false });
 {
   const dir = positionLocal.normalize();
   const y = dir.y;
-  const top = color(0x2a66b0);
-  const horizon = color(0xd2dcea);
-  const bottom = color(0xa9b59a);
-  const above = mix(horizon, top, max(y, 0).pow(0.55));
-  const below = mix(horizon, bottom, max(y.negate(), 0).pow(0.7));
-  const base = select(y.greaterThan(0), above, below);
+  const upness = y.max(0.0);
 
-  const d = dir.dot(uniform(SUN_DIR)).max(0);          // 1 in Sonnenrichtung
-  const glow = d.pow(7.0).mul(0.32).add(d.pow(260.0).mul(2.0)); // Halo + heller Kern
-  skyMat.colorNode = base.add(color(0xffe6b0).mul(glow));
+  // Tagesfaktor aus der Sonnenhöhe; nachts kippen alle Farben ins Dunkelblau.
+  const dayF = smoothstep(-0.06, 0.16, uSunElev);
+  const zenith = mix(color(0x050a16), color(0x1f52a2), dayF);
+  const horizon = mix(color(0x0d1626), color(0xcfdcec), dayF);
+  const groundHaze = mix(color(0x05070c), color(0x97a48f), dayF);
+
+  const above = mix(horizon, zenith, upness.pow(0.45));
+  const below = mix(horizon, groundHaze, y.negate().max(0.0).pow(0.6));
+  const base = select(y.greaterThan(0.0), above, below);
+
+  const mu = dir.dot(uniform(SUN_DIR));
+  const muPos = mu.max(0.0);
+  // Warmes Streulicht: stark in Sonnenrichtung, konzentriert am Horizont;
+  // in der Dämmerung deutlich kräftiger (Abendrot).
+  const dusk = smoothstep(0.45, 0.02, uSunElev).mul(dayF);
+  const warm = muPos.pow(6.0).mul(float(1.0).sub(upness).pow(3.0)).mul(dusk.mul(1.6).add(0.55));
+  // Weicher Dunst-Halo direkt um die Sonne.
+  const halo = muPos.pow(32.0).mul(0.3);
+  // Scharfe, HDR-helle Sonnenscheibe (~1° Durchmesser), unter dem Horizont aus.
+  const sunVis = smoothstep(-0.1, 0.02, uSunElev);
+  const disc = smoothstep(0.99950, 0.99983, mu).mul(22.0).mul(sunVis);
+
+  // Sterne: Hash-Raster über die Blickrichtung, nur nachts sichtbar.
+  // Innerhalb jeder Rasterzelle leuchtet nur ein weicher Punkt im Zentrum.
+  const grid = dir.mul(90.0);
+  const cell = grid.floor();
+  const starH = hash(cell.x.add(cell.y.mul(57.0)).add(cell.z.mul(113.0)));
+  const dot = smoothstep(0.24, 0.05, grid.fract().sub(0.5).length());
+  const stars = step(0.998, starH).mul(dot)
+    .mul(float(1.0).sub(dayF)).mul(upness.add(0.15).min(1.0)).mul(1.3);
+
+  skyMat.colorNode = base
+    .add(color(0xffd9a0).mul(warm.add(halo)).mul(sunVis))
+    .add(color(0xfff3dc).mul(disc))
+    .add(color(0xdfe8ff).mul(stars));
 }
-const sky = new THREE.Mesh(new THREE.SphereGeometry(12000, 32, 16), skyMat);
+const sky = new THREE.Mesh(new THREE.SphereGeometry(12000, 48, 24), skyMat);
 sky.frustumCulled = false;
 scene.add(sky);
 
-const sunDisc = new THREE.Mesh(
-  new THREE.CircleGeometry(420, 32),
-  new THREE.MeshBasicMaterial({ color: 0xfff4d6, fog: false })
-);
-scene.add(sunDisc);
-
 // ---- Post-Processing: HDR-Bloom ----
-// Lässt helle Bereiche (Sonnenkern, Feuer, glühende Augen) aufstrahlen.
+// Lässt helle Bereiche (Sonnenkern, Feuer, Tracer, glühende Augen) aufstrahlen.
 // Schwelle 1.0 → nur HDR-helle (>1) Bereiche bluten, nicht der normale Himmel.
 export const postFx = new THREE.RenderPipeline(renderer);
 {
@@ -63,16 +118,45 @@ export const postFx = new THREE.RenderPipeline(renderer);
   const sceneColor = scenePass.getTextureNode("output");
   const bloomPass = bloom(sceneColor);
   bloomPass.threshold.value = 1.0;
-  bloomPass.strength.value = 0.7;
-  bloomPass.radius.value = 0.6;
+  bloomPass.strength.value = 0.45;
+  bloomPass.radius.value = 0.4;
   postFx.outputNode = sceneColor.add(bloomPass);
 }
 
-/** Himmel und Sonnenscheibe an die Kamera koppeln (jedes Frame). */
-export function updateSky() {
+const SUN_DAY = new THREE.Color(0xffeed2);
+const SUN_DUSK = new THREE.Color(0xff9040);
+
+/**
+ * Jedes Frame: Sonne über den Tag-Nacht-Zyklus bewegen, Licht/Nebel/Himmel
+ * nachführen und das Schatten-Frustum an die Kamera koppeln.
+ * @param {number} time  Spielzeit in Sekunden
+ */
+export function updateSky(time = 0) {
+  // Sonnenbahn: startet am Vormittag, ein voller Tag dauert DAY_LEN Sekunden.
+  const a = (time / DAY_LEN) * Math.PI * 2 + 0.85;
+  const elev = Math.sin(a);
+  SUN_DIR.set(Math.cos(a) * 0.85, Math.max(elev, -0.35), 0.35).normalize();
+  uSunElev.value = elev;
+
+  const dayF = THREE.MathUtils.smoothstep(elev, -0.02, 0.18);
+  uNight.value = 1 - THREE.MathUtils.smoothstep(elev, -0.08, 0.1);
+
+  // Licht: Sonne dimmt und färbt sich zur Dämmerung, nachts Restlicht.
+  sun.intensity = 3.0 * dayF;
+  sun.color.lerpColors(SUN_DUSK, SUN_DAY, THREE.MathUtils.smoothstep(elev, 0.05, 0.4));
+  hemi.intensity = 0.12 + 0.58 * dayF;
+  ambient.intensity = 0.05 + 0.07 * dayF;
+
+  // Nebel: Farbe folgt dem Himmel; in der Dämmerung ziehen Schwaden auf.
+  scene.fog.color.lerpColors(FOG_NIGHT, FOG_DAY, dayF);
+  const lowSun = THREE.MathUtils.smoothstep(elev, 0.0, 0.06) * (1 - THREE.MathUtils.smoothstep(elev, 0.06, 0.3));
+  scene.fog.density = FOG_BASE_DENSITY * (1 + lowSun * 1.1);
+
   sky.position.copy(camera.position);
-  sunDisc.position.copy(camera.position).add(sun.position.clone().normalize().multiplyScalar(11000));
-  sunDisc.lookAt(camera.position);
+  // Die Schattenkamera folgt dem Spieler, damit die 1400-m-Schattenbox
+  // immer den sichtbaren Nahbereich abdeckt.
+  sun.target.position.copy(camera.position);
+  sun.position.copy(camera.position).addScaledVector(SUN_DIR, 3000);
 }
 
 addEventListener("resize", () => {

@@ -1,5 +1,7 @@
-// Prozedurales Höhenrauschen — deterministisch, ohne externe Library.
-// Liefert für jede Weltkoordinate (x, z) eine reproduzierbare Höhe.
+// Deterministisches Rauschen + Geländehöhe. Die grobe Landschaftsform kommt
+// aus der festen Insel-Heightmap (src/map.js); hier wird nur noch feines
+// Detailrauschen daraufgelegt und die Biom-Felder (Klima/Feuchte) berechnet.
+import { mapHeightAt } from "./map.js";
 
 /** Hash einer ganzzahligen Koordinate auf einen Wert in [0, 1). */
 export function hash(ix, iz) {
@@ -10,13 +12,6 @@ export function hash(ix, iz) {
 
 function smooth(t) {
   return t * t * (3 - 2 * t);
-}
-
-function smoothstep(x, min, max) {
-  if (x <= min) return 0;
-  if (x >= max) return 1;
-  x = (x - min) / (max - min);
-  return x * x * (3 - 2 * x);
 }
 
 /** Bilinear interpoliertes Value-Noise in [0, 1). */
@@ -30,27 +25,6 @@ export function valueNoise(x, z) {
          c * (1 - ux) * uz + d * ux * uz;
 }
 
-/** Fractal Brownian Motion — sanfte, geschichtete Hügel. */
-function fbm(x, z, octaves, freq) {
-  let amp = 1, sum = 0, norm = 0;
-  for (let i = 0; i < octaves; i++) {
-    sum += amp * valueNoise(x * freq, z * freq);
-    norm += amp; amp *= 0.5; freq *= 2.05;
-  }
-  return sum / norm;
-}
-
-/** Ridged Noise — scharfe Grate für Gebirge. */
-function ridged(x, z, octaves, freq) {
-  let amp = 1, sum = 0, norm = 0;
-  for (let i = 0; i < octaves; i++) {
-    const n = 1 - Math.abs(2 * valueNoise(x * freq, z * freq) - 1);
-    sum += amp * n * n;
-    norm += amp; amp *= 0.5; freq *= 2.1;
-  }
-  return sum / norm;
-}
-
 // ---- Biom-Felder (sehr niederfrequent → große Regionen) ----
 /** „Temperatur" 0..1: arid → gemäßigt → kalt. Steuert Boden- & Baumfarben. */
 export function climateAt(x, z) {
@@ -62,12 +36,12 @@ export function moistureAt(x, z) {
 }
 
 /**
- * Geländehöhe an Weltposition (x, z).
- * Kombiniert sanftes Grundland mit Gebirgen, die nur in maskierten Regionen aufragen.
+ * Geländehöhe an Weltposition (x, z): feste Insel-Heightmap plus zwei feine
+ * Detail-Oktaven. Das Detail (±~2,5) bricht die 8-Bit-Höhenstufen der Karte
+ * auf, ist deterministisch und ändert die Landschaftsform nicht.
  */
 export function heightAt(x, z) {
-  const base = Math.pow(fbm(x, z, 4, 1 / 900), 1.35);
-  const mask = smoothstep(fbm(x + 5000, z - 3000, 2, 1 / 2600), 0.4, 0.72);
-  const mountains = ridged(x, z, 5, 1 / 1100) * mask;
-  return base * 240 + mountains * 650 - 55;
+  const d1 = (valueNoise(x * 0.022, z * 0.022) - 0.5) * 3.4;
+  const d2 = (valueNoise(x * 0.085 + 40, z * 0.085 - 17) - 0.5) * 1.4;
+  return mapHeightAt(x, z) + d1 + d2;
 }

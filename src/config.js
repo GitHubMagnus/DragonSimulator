@@ -66,6 +66,36 @@ export const ICARUS_PALETTE = [
   { name: "Karmin", hex: 0x9e2b3a },
 ];
 
+// ---- Auswählbare Superman-Anzüge ----
+export const SUPERMAN_PALETTE = [
+  { name: "Klassisch Blau", hex: 0x2b4fa8 },
+  { name: "Nachtschwarz", hex: 0x23232b },
+  { name: "Stahlgrau", hex: 0x5a6673 },
+  { name: "Purpur", hex: 0x5e2f7a },
+  { name: "Smaragd", hex: 0x2e6b46 },
+  { name: "Karmesin", hex: 0x8f2430 },
+];
+
+// ---- Auswählbare UFO-Hüllen ----
+export const UFO_PALETTE = [
+  { name: "Chromsilber", hex: 0x9aa6b2 },
+  { name: "Gunmetal", hex: 0x4c545e },
+  { name: "Gold", hex: 0xb8902f },
+  { name: "Türkis", hex: 0x3a8f8f },
+  { name: "Violett", hex: 0x6a4a9a },
+  { name: "Marsrot", hex: 0x9a3a3a },
+];
+
+// ---- Auswählbare Phönix-Flammen ----
+export const PHOENIX_PALETTE = [
+  { name: "Glutorange", hex: 0xd2641b },
+  { name: "Blauflamme", hex: 0x2b6fd0 },
+  { name: "Smaragdflamme", hex: 0x2ea86a },
+  { name: "Violettflamme", hex: 0x8a3ad2 },
+  { name: "Sonnengold", hex: 0xd8a020 },
+  { name: "Karminglut", hex: 0xb02a3a },
+];
+
 // ---- Wählbare Fluggeräte (Reihenfolge = Anzeige im Menü) ----
 // `fire` steuert nur den Steuerungs-Hinweis im Menü; die Mechanik selbst
 // hängt an `fireEnabled` des jeweiligen Modells.
@@ -73,4 +103,7 @@ export const FLIERS = [
   { id: "dragon",   label: "Drache",   emoji: "🐉", palette: DRAGON_PALETTE,   fire: true,  desc: "Wendiger Feuerspeier mit Flügelschlag" },
   { id: "airplane", label: "Flugzeug", emoji: "✈️", palette: AIRPLANE_PALETTE, fire: true,  desc: "Propellerjäger, schnell und stabil" },
   { id: "icarus",   label: "Ikarus",   emoji: "🪶", palette: ICARUS_PALETTE,   fire: false, desc: "Federschwingen aus Wachs — flieg nicht zu hoch" },
+  { id: "superman", label: "Superman", emoji: "🦸", palette: SUPERMAN_PALETTE, fire: true,  desc: "Der Mann aus Stahl — mit Hitzeblick" },
+  { id: "ufo",      label: "UFO",      emoji: "🛸", palette: UFO_PALETTE,      fire: true,  desc: "Fliegende Untertasse mit Energiegeschütz" },
+  { id: "phoenix",  label: "Phönix",   emoji: "🔥", palette: PHOENIX_PALETTE,  fire: true,  desc: "Glühender Feuervogel, speit Flammen" },
 ];

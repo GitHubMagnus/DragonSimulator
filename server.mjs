@@ -9,6 +9,8 @@ const TYPES = {
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
 };
 
 createServer(async (req, res) => {
@@ -17,7 +19,11 @@ createServer(async (req, res) => {
   const filePath = join(ROOT, normalize(urlPath).replace(/^(\.\.[/\\])+/, ""));
   try {
     const data = await readFile(filePath);
-    res.writeHead(200, { "Content-Type": TYPES[extname(filePath)] || "application/octet-stream" });
+    res.writeHead(200, {
+      "Content-Type": TYPES[extname(filePath)] || "application/octet-stream",
+      // Dev-Server: nie cachen, sonst mischen sich alte und neue Module/Assets
+      "Cache-Control": "no-store",
+    });
     res.end(data);
   } catch {
     res.writeHead(404, { "Content-Type": "text/plain" });

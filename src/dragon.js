@@ -13,13 +13,15 @@ export class Dragon extends Flier {
     this.fireMode = "flame";
     this.fireMuzzle.set(0, 7, -26);
 
-    // Materialien (von setColor() eingefärbt)
-    this._scaleMat = new THREE.MeshStandardMaterial({ color: 0x7d1f24, flatShading: true, roughness: 0.7 });
-    this._bellyMat = new THREE.MeshStandardMaterial({ color: 0xc8973f, flatShading: true });
-    this._membraneMat = new THREE.MeshStandardMaterial({ color: 0x4a1518, flatShading: true, side: THREE.DoubleSide, roughness: 0.9 });
-    this._ridgeMat = new THREE.MeshStandardMaterial({ color: 0x3a1014, flatShading: true, roughness: 0.6 });
-    this._hornMat = new THREE.MeshStandardMaterial({ color: 0xe6dcc2, flatShading: true, roughness: 0.5 });
-    this._eyeMat = new THREE.MeshStandardMaterial({ color: 0x331100, emissive: 0xffb000, emissiveIntensity: 1.4 });
+    // Materialien (von setColor() eingefärbt). Organische Flächen sind glatt
+    // schattiert (kein Facetten-Look mehr); Hörner/Krallen leicht glänzend.
+    this._scaleMat = new THREE.MeshStandardMaterial({ color: 0x7d1f24, roughness: 0.62 });
+    this._bellyMat = new THREE.MeshStandardMaterial({ color: 0xc8973f, roughness: 0.75 });
+    this._membraneMat = new THREE.MeshStandardMaterial({ color: 0x4a1518, flatShading: true, side: THREE.DoubleSide, roughness: 0.85 });
+    this._ridgeMat = new THREE.MeshStandardMaterial({ color: 0x3a1014, roughness: 0.55 });
+    this._hornMat = new THREE.MeshStandardMaterial({ color: 0xe6dcc2, roughness: 0.35, metalness: 0.05 });
+    // HDR-Emissive (>1) → die Augen glühen sichtbar im Bloom.
+    this._eyeMat = new THREE.MeshStandardMaterial({ color: 0x331100, emissive: 0xffb000, emissiveIntensity: 3.2 });
 
     this._buildBody();
     this._buildSpine();
