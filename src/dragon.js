@@ -3,6 +3,7 @@
 // Kopf mit Zähnen und glühenden Augen sowie wedelndem Schwanz. Bewegung/Physik
 // liegt in flight.js, die Animation (Flügelschlag/Wedeln) in update().
 import * as THREE from "three";
+import { materialColor, positionLocal, triNoise3D } from "three/tsl";
 import { Flier } from "./flier.js";
 
 export class Dragon extends Flier {
@@ -15,7 +16,10 @@ export class Dragon extends Flier {
 
     // Materialien (von setColor() eingefärbt). Organische Flächen sind glatt
     // schattiert (kein Facetten-Look mehr); Hörner/Krallen leicht glänzend.
-    this._scaleMat = new THREE.MeshStandardMaterial({ color: 0x7d1f24, roughness: 0.62 });
+    // Schuppen-Detail: feines Noise moduliert die Grundfarbe (setColor bleibt
+    // wirksam, weil materialColor die .color-Eigenschaft spiegelt).
+    this._scaleMat = new THREE.MeshStandardNodeMaterial({ color: 0x7d1f24, roughness: 0.62 });
+    this._scaleMat.colorNode = materialColor.mul(triNoise3D(positionLocal.mul(0.42), 0, 0).mul(0.3).add(0.84));
     this._bellyMat = new THREE.MeshStandardMaterial({ color: 0xc8973f, roughness: 0.75 });
     this._membraneMat = new THREE.MeshStandardMaterial({ color: 0x4a1518, flatShading: true, side: THREE.DoubleSide, roughness: 0.85 });
     this._ridgeMat = new THREE.MeshStandardMaterial({ color: 0x3a1014, roughness: 0.55 });

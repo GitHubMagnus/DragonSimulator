@@ -2,7 +2,7 @@
 
 // ---- Welt ----
 export const WORLD = 9000;                 // Kantenlänge des Terrain-Meshes
-export const SEG = 240;                     // Terrain-Auflösung (SEG × SEG Quads)
+export const SEG = 300;                     // Terrain-Auflösung (SEG × SEG Quads)
 export const STEP = WORLD / SEG;            // Abstand zweier Gitterpunkte
 export const WATER_LEVEL = 0;
 export const RECENTER_DIST = WORLD * 0.2;   // ab dieser Distanz zieht die Welt nach

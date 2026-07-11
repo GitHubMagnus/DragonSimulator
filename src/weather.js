@@ -6,7 +6,7 @@ import {
   uv, vec3, color, float, time, uniform, instancedBufferAttribute,
   positionGeometry, cameraWorldMatrix, smoothstep,
 } from "three/tsl";
-import { scene } from "./scene.js";
+import { scene, uFogDensity } from "./scene.js";
 
 const COUNT = 650;
 const BOX = 360;    // Regen-Box um den Spieler (Kantenlänge)
@@ -60,7 +60,7 @@ export class Weather {
     this._uK.value = this._k;
     this._rain.visible = this._k > 0.02;
     this._uCenter.value.copy(playerPos);
-    // dichter Dunst im Schauer
-    scene.fog.density *= 1 + this._k * 1.6;
+    // dichter Dunst im Schauer (updateSky hat die Basisdichte gerade gesetzt)
+    uFogDensity.value *= 1 + this._k * 1.6;
   }
 }

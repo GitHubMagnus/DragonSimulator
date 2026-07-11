@@ -1103,7 +1103,12 @@ export class Structures {
         needed.add(key);
         if (!this._cells.has(key)) {
           const g = buildCell(cx, cz);
-          if (g) { this.root.add(g); this._track(g); }
+          if (g) {
+            g.userData.cellX = cx * STRUCT_CELL + STRUCT_CELL / 2;
+            g.userData.cellZ = cz * STRUCT_CELL + STRUCT_CELL / 2;
+            this.root.add(g);
+            this._track(g);
+          }
           this._cells.set(key, g || null);
         }
       }
@@ -1115,6 +1120,12 @@ export class Structures {
           g.userData.rotors?.forEach((r) => this._rotors.delete(r));
         }
         this._cells.delete(key);
+      } else if (g) {
+        // Distanz-Culling: Zufallsbauten jenseits des Dunsts nicht zeichnen
+        // (die großen Landmarken bleiben immer sichtbar).
+        const dx = g.userData.cellX - centerX;
+        const dz = g.userData.cellZ - centerZ;
+        g.visible = dx * dx + dz * dz < 4200 * 4200;
       }
     }
   }

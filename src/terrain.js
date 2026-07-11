@@ -3,7 +3,10 @@
 // biom- und hangabhängig: Sandstrände, Wiesen mit Flecken, felsige Steilhänge
 // und Klippen sowie Schnee nur auf flacheren Höhenlagen.
 import * as THREE from "three";
-import { positionWorld, vertexColor, triNoise3D, float } from "three/tsl";
+import {
+  positionWorld, vertexColor, triNoise3D, float, mix as tslMix, color as tslColor,
+  smoothstep as tslSmoothstep, normalWorld,
+} from "three/tsl";
 import { WORLD, SEG, STEP } from "./config.js";
 import { heightAt, valueNoise, climateAt, moistureAt, hash } from "./noise.js";
 import { roadDist, inField, distTo, VOLCANO, CITY, CASTLE, PORT } from "./world.js";
@@ -131,7 +134,12 @@ export class Terrain {
     const detailA = triNoise3D(positionWorld.mul(0.012), 0, 0);
     const detailB = triNoise3D(positionWorld.mul(0.07), 0, 0);
     const shade = detailA.mul(0.30).add(detailB.mul(0.18)).add(float(0.78));
-    mat.colorNode = vertexColor().mul(shade);
+    // Felswände per Pixel: steile Flächen (Normale) kippen in geschichteten
+    // Fels — unabhängig von der Gitterauflösung, mit Noise-Bänderung.
+    const steep = float(1.0).sub(tslSmoothstep(0.52, 0.74, normalWorld.y));
+    const bands = triNoise3D(positionWorld.mul(0.028).mul(float(1.0).add(positionWorld.y.mul(0.0004))), 0, 0);
+    const rock = tslMix(tslColor(0x5f584e), tslColor(0x8d8478), bands);
+    mat.colorNode = tslMix(vertexColor().mul(shade), rock.mul(shade), steep.mul(0.88));
 
     this.mesh = new THREE.Mesh(geo, mat);
     this.mesh.receiveShadow = true;

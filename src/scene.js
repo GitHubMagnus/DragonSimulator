@@ -3,15 +3,24 @@
 // HDR-Post-Processing (ACES-Tonemapping + Bloom).
 import * as THREE from "three";
 import {
-  positionLocal, color, mix, select, uniform, pass, float, smoothstep, hash, step,
+  positionLocal, positionWorld, positionView, cameraPosition, color, mix, select,
+  uniform, pass, float, smoothstep, hash, step, fog, saturation, renderOutput, screenUV,
 } from "three/tsl";
 import { bloom } from "three/addons/tsl/display/BloomNode.js";
+import { fxaa } from "three/addons/tsl/display/FXAANode.js";
 
 export const scene = new THREE.Scene();
 const FOG_DAY = new THREE.Color(0xc6d3e2);
 const FOG_NIGHT = new THREE.Color(0x0b101c);
 const FOG_BASE_DENSITY = 0.00021;
-scene.fog = new THREE.FogExp2(0xc6d3e2, FOG_BASE_DENSITY);
+
+// ---- Höhennebel mit Sonnenstreuung (ersetzt den uniformen FogExp2) ----
+// Der Dunst sammelt sich in den Tälern und lichtet sich mit der Höhe; in
+// Sonnenrichtung glüht er warm auf (aerial perspective). Dichte und Farbe
+// steuert updateSky(); das Wetter (weather.js) verstärkt uFogDensity.
+export const uFogDensity = uniform(FOG_BASE_DENSITY);
+const uFogColor = uniform(new THREE.Color(0xc6d3e2));
+const uFogWarm = uniform(0); // Dämmerungs-Glut in Sonnenrichtung
 
 export const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 1, 16000);
 
@@ -109,6 +118,30 @@ const sky = new THREE.Mesh(new THREE.SphereGeometry(12000, 48, 24), skyMat);
 sky.frustumCulled = false;
 scene.add(sky);
 
+// Höhennebel aktivieren (nutzt die oben deklarierten Uniforms + SUN_DIR)
+{
+  const dist = positionView.z.negate();
+  const hgt = positionWorld.y.max(0.0).mul(-0.0022).exp(); // 1 im Tal … →0 in der Höhe
+  const density = uFogDensity.mul(hgt.mul(0.8).add(0.2));
+  const factor = dist.mul(density).pow(2.0).negate().exp().oneMinus();
+  const vdir = positionWorld.sub(cameraPosition).normalize();
+  const sunAmt = vdir.dot(uniform(SUN_DIR)).max(0.0).pow(5.0).mul(uFogWarm);
+  scene.fogNode = fog(mix(uFogColor, color(0xffc890), sunAmt), factor);
+}
+
+// ---- Umgebungsreflexionen (IBL): der Himmel wird in eine Cubemap gerendert,
+// die alle PBR-Materialien (Gold, Metall, Wasser, Lack) spiegeln. Wird nur
+// aktualisiert, wenn die Sonne merklich gewandert ist (s. updateSky).
+const envRT = new THREE.CubeRenderTarget(128, {
+  generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter,
+});
+const envCam = new THREE.CubeCamera(1, 5000, envRT);
+const envScene = new THREE.Scene();
+envScene.add(new THREE.Mesh(new THREE.SphereGeometry(1000, 32, 16), skyMat));
+scene.environment = envRT.texture;
+scene.environmentIntensity = 0.5;
+let lastEnvElev = 99;
+
 // ---- Post-Processing: HDR-Bloom ----
 // Lässt helle Bereiche (Sonnenkern, Feuer, Tracer, glühende Augen) aufstrahlen.
 // Schwelle 1.0 → nur HDR-helle (>1) Bereiche bluten, nicht der normale Himmel.
@@ -120,7 +153,14 @@ export const postFx = new THREE.RenderPipeline(renderer);
   bloomPass.threshold.value = 1.0;
   bloomPass.strength.value = 0.45;
   bloomPass.radius.value = 0.4;
-  postFx.outputNode = sceneColor.add(bloomPass);
+
+  // HDR-Komposition → Tonemapping/sRGB → leichte Sättigung → Vignette → FXAA
+  let comp = renderOutput(sceneColor.add(bloomPass));
+  comp = saturation(comp, 1.12);
+  const d = screenUV.sub(0.5).length().mul(2.0);
+  comp = comp.mul(float(1.0).sub(smoothstep(0.85, 1.65, d).mul(0.32)));
+  postFx.outputColorTransform = false; // renderOutput wird oben manuell angewendet
+  postFx.outputNode = fxaa(comp);
 }
 
 const SUN_DAY = new THREE.Color(0xffeed2);
@@ -144,13 +184,23 @@ export function updateSky(time = 0) {
   // Licht: Sonne dimmt und färbt sich zur Dämmerung, nachts Restlicht.
   sun.intensity = 3.0 * dayF;
   sun.color.lerpColors(SUN_DUSK, SUN_DAY, THREE.MathUtils.smoothstep(elev, 0.05, 0.4));
-  hemi.intensity = 0.12 + 0.58 * dayF;
-  ambient.intensity = 0.05 + 0.07 * dayF;
+  // Etwas zurückgenommen, weil die Environment-Map zusätzlich Licht beiträgt
+  hemi.intensity = 0.1 + 0.46 * dayF;
+  ambient.intensity = 0.04 + 0.05 * dayF;
 
-  // Nebel: Farbe folgt dem Himmel; in der Dämmerung ziehen Schwaden auf.
-  scene.fog.color.lerpColors(FOG_NIGHT, FOG_DAY, dayF);
+  // Nebel: Farbe folgt dem Himmel; in der Dämmerung ziehen Schwaden auf und
+  // der Dunst glüht in Sonnenrichtung warm.
+  uFogColor.value.lerpColors(FOG_NIGHT, FOG_DAY, dayF);
   const lowSun = THREE.MathUtils.smoothstep(elev, 0.0, 0.06) * (1 - THREE.MathUtils.smoothstep(elev, 0.06, 0.3));
-  scene.fog.density = FOG_BASE_DENSITY * (1 + lowSun * 1.1);
+  uFogDensity.value = FOG_BASE_DENSITY * (1 + lowSun * 1.1);
+  uFogWarm.value = (0.2 + lowSun * 1.3) * dayF;
+
+  // Umgebungsreflexionen nachführen, wenn die Sonne merklich gewandert ist
+  scene.environmentIntensity = 0.12 + 0.42 * dayF;
+  if (Math.abs(elev - lastEnvElev) > 0.03) {
+    lastEnvElev = elev;
+    envCam.update(renderer, envScene);
+  }
 
   sky.position.copy(camera.position);
   // Die Schattenkamera folgt dem Spieler, damit die 1400-m-Schattenbox
